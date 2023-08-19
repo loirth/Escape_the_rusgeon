@@ -1,6 +1,6 @@
 // use std::env::current_exe;
-use std::io::{self, Write};
-use std::process;
+use std::{io::{self, Write}, process, thread, time};
+use console::Term;
 
 #[allow(unused_imports)]
 use core::mem::drop;
@@ -12,7 +12,6 @@ struct Position {
 }
 
 fn main() {
-	#[allow(unused_mut)]
 	let mut map: Vec<Vec<char>> = vec![
 	vec!['+', '+', '+', '+', '+', '+', '+', '+', '+', '+'],
 	vec!['+', '+', '+', '+', '+', '+', '+', '+', '+', '+'],
@@ -29,9 +28,11 @@ fn main() {
 	let mut current_player_position = get_position(map.clone(), '@');
 	let mut previous_player_position = Position {x: current_player_position.x, y: current_player_position.y};
 
-	loop {
-		let mut user_input: String = String::new();
+	let stdout = Term::buffered_stdout();
 
+	const FPS: u64 = 1000 / 60;
+
+	loop {
 		clear_screen();
 		move_cursor_up(1000);
 
@@ -40,33 +41,30 @@ fn main() {
 			map[previous_player_position.y][previous_player_position.x] = '+';
 		}
 
+		println!("WASD - movement; p - exit\n");
+
 		for layer in 0..map.len() {
 			println!("{}", map[layer].iter().collect::<String>());
 		}
-
-		println!("Enter direction or |w|a|s|d| or \"exit\"");
 		
-		io::stdin()
-			.read_line(&mut user_input)
-			.expect("Failed to read line");
-
 		let mut player_position = Position {
 				x: current_player_position.x,
 				y: current_player_position.y
 		};
 
-		match user_input.to_lowercase().trim() {
-			"exit" => close_program(),
-			"up" | "down" | "left" | "right" | "w" | "s" | "a" | "d" => player_position = move_object(player_position, user_input.to_lowercase().trim()),
-			_ => {
-				println!("Wrong function, please try again!");
-				continue;
-			},
-		}
+		if let Ok(character) = stdout.read_char() {
+            match character {
+                'w' | 'a' | 's' | 'd' | 'W' | 'A' | 'S' | 'D' => player_position = move_object(player_position, character),
+                'p' | 'P' => close_program(),
+                _ => println!("{}", character),
+            }
+        }
 
 		previous_player_position.x = current_player_position.x;
 		previous_player_position.y = current_player_position.y;
 		current_player_position = player_position;
+
+		thread::sleep(time::Duration::from_millis(FPS));
 	}
 }
 
@@ -86,12 +84,12 @@ fn close_program() {
 }
 
 
-fn move_object(mut current_pos: Position, direction: &str) -> Position {
-	match direction {
-		"up" | "w" => current_pos.y -= 1,
-		"down" | "s" => current_pos.y += 1,
-		"right" | "d" => current_pos.x += 1,
-		"left" | "a" => current_pos.x -= 1,
+fn move_object(mut current_pos: Position, direction: char) -> Position {
+	match direction { // I use a function to add animations in future
+		'w' | 'W' => current_pos.y -= 1,
+		's' | 'S' => current_pos.y += 1,
+		'd' | 'D' => current_pos.x += 1,
+		'a' | 'A' => current_pos.x -= 1,
 		_ => return current_pos,
 	};
 	return current_pos;
