@@ -12,20 +12,25 @@ struct Position {
 }
 
 fn main() {
+	let w = '■'; // wall texture
+	let a = ' '; // air texture
+	let p = '@'; // player texture
+	
+	#[allow(unused_mut)]
 	let mut map: Vec<Vec<char>> = vec![
-	vec!['+', '+', '+', '+', '+', '+', '+', '+', '+', '+'],
-	vec!['+', '+', '+', '+', '+', '+', '+', '+', '+', '+'],
-	vec!['+', '+', '+', '@', '+', '+', '+', '+', '+', '+'],
-	vec!['+', '+', '+', '+', '+', '+', '+', '+', '+', '+'],
-	vec!['+', '+', '+', '+', '+', '+', '+', '+', '+', '+'],
-	vec!['+', '+', '+', '+', '+', '+', '+', '+', '+', '+'],
-	vec!['+', '+', '+', '+', '+', '+', '+', '+', '+', '+'],
-	vec!['+', '+', '+', '+', '+', '+', '+', '+', '+', '+'],
-	vec!['+', '+', '+', '+', '+', '+', '+', '+', '+', '+'],
-	vec!['+', '+', '+', '+', '+', '+', '+', '+', '+', '+'],
+	vec![w, w, w, w, w, w, w, w, w, w],
+	vec![w, a, a, a, a, a, a, a, a, w],
+	vec![w, a, a, a, a, a, a, a, a, w],
+	vec![w, a, a, a, a, a, a, a, a, w],
+	vec![w, a, a, a, a, a, a, a, a, w],
+	vec![w, a, a, a, a, a, a, a, a, w],
+	vec![w, a, a, a, a, a, p, a, a, w],
+	vec![w, a, a, a, a, a, a, a, a, w],
+	vec![w, a, a, a, a, a, a, a, a, w],
+	vec![w, w, w, w, w, w, w, w, w, w],
 	];
 
-	let mut current_player_position = get_position(map.clone(), '@');
+	let mut current_player_position = get_position(map.clone(), p);
 	let mut previous_player_position = Position {x: current_player_position.x, y: current_player_position.y};
 
 	let stdout = Term::buffered_stdout();
@@ -36,9 +41,9 @@ fn main() {
 		clear_screen();
 		move_cursor_up(1000);
 
-		map[current_player_position.y][current_player_position.x] = '@';
+		map[current_player_position.y][current_player_position.x] = p;
 		if previous_player_position.x != current_player_position.x || previous_player_position.y != current_player_position.y {
-			map[previous_player_position.y][previous_player_position.x] = '+';
+			map[previous_player_position.y][previous_player_position.x] = a;
 		}
 
 		println!("WASD - movement; p - exit\n");
@@ -54,12 +59,18 @@ fn main() {
 
 		if let Ok(character) = stdout.read_char() {
             match character {
-                'w' | 'a' | 's' | 'd' | 'W' | 'A' | 'S' | 'D' => player_position = move_object(player_position, character),
+                'w' | 'a' | 's' | 'd' | 'W' | 'A' | 'S' | 'D' => {
+                	player_position = move_object(player_position, character);
+					
+					if !check_for_obstacles(player_position.x, player_position.y, w, map.clone()) {
+						player_position.x = current_player_position.x;
+						player_position.y = current_player_position.y;					
+					}
+				}
                 'p' | 'P' => close_program(),
                 _ => println!("{}", character),
-            }
+        	}
         }
-
 		previous_player_position.x = current_player_position.x;
 		previous_player_position.y = current_player_position.y;
 		current_player_position = player_position;
@@ -93,6 +104,11 @@ fn move_object(mut current_pos: Position, direction: char) -> Position {
 		_ => return current_pos,
 	};
 	return current_pos;
+}
+
+
+fn check_for_obstacles(x: usize, y: usize, obstacle_texture: char, map: Vec<Vec<char>>) -> bool {
+	return if map[y][x] == obstacle_texture { false } else { true }
 }
 
 
