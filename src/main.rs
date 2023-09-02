@@ -5,17 +5,19 @@ use console::Term;
 #[allow(unused_imports)]
 use core::mem::drop;
 
-#[derive(Debug)]
-struct Position {
-	x: usize,
-	y: usize,
-}
+mod sprites;
+pub use crate::sprites::{functions, player::Player};
+
+mod structs;
+pub use crate::structs::*;
 
 fn main() {
+	let player_anim_frames = ['▲', '<', '▼', '>'];
+
 	let w = '■'; // wall texture
 	let a = ' '; // air texture
-	let p = '@'; // player texture
-	
+	let mut p = player_anim_frames[1]; // player texture, yes we have structure "player", but in map it's better to just write "p" instead of "player.texture"
+
 	#[allow(unused_mut)]
 	let mut map: Vec<Vec<char>> = vec![
 	vec![w, w, w, w, w, w, w, w, w, w],
@@ -30,9 +32,9 @@ fn main() {
 	vec![w, w, w, w, w, w, w, w, w, w],
 	];
 
-	let mut current_player_position = get_position(map.clone(), p);
-	let mut previous_player_position = Position {x: current_player_position.x, y: current_player_position.y};
-
+	let mut player = Player{anim_frames: player_anim_frames, texture: p, position: functions::get_position(map.clone(), p), direction: 'w'};
+	let mut previous_player_position = Position {x: player.position.x, y: player.position.y};
+	
 	let stdout = Term::buffered_stdout();
 
 	const FPS: u64 = 1000 / 60;
@@ -41,39 +43,41 @@ fn main() {
 		clear_screen();
 		move_cursor_up(1000);
 
-		map[current_player_position.y][current_player_position.x] = p;
-		if previous_player_position.x != current_player_position.x || previous_player_position.y != current_player_position.y {
+		// Map changing
+		map[player.position.y][player.position.x] = p;
+		/*if previous_player_position.x != player.position.x || previous_player_position.y != player.position.y {
 			map[previous_player_position.y][previous_player_position.x] = a;
-		}
+		}*/
 
+		// UI
 		println!("WASD - movement; p - exit\n");
-
+		// Map printing
 		for layer in 0..map.len() {
 			println!("{}", map[layer].iter().collect::<String>());
 		}
 		
-		let mut player_position = Position {
-				x: current_player_position.x,
-				y: current_player_position.y
-		};
-
 		if let Ok(character) = stdout.read_char() {
-            match character {
-                'w' | 'a' | 's' | 'd' | 'W' | 'A' | 'S' | 'D' => {
-                	player_position = move_object(player_position, character);
-					
-					if !check_for_obstacles(player_position.x, player_position.y, w, map.clone()) {
-						player_position.x = current_player_position.x;
-						player_position.y = current_player_position.y;					
+			match character {
+				'w' | 'a' | 's' | 'd' | 'W' | 'A' | 'S' | 'D' => {
+					player.direction = character;
+					player.walk();
+
+					if !functions::check_for_obstacles(player.position.x, player.position.y, w, map.clone()) {
+						player.position.x = previous_player_position.x;
+						player.position.y = previous_player_position.y;
 					}
+
+					map[previous_player_position.y][previous_player_position.x] = a;//fill this tile with air, needed to avoid ïf statement
 				}
-                'p' | 'P' => close_program(),
-                _ => println!("{}", character),
-        	}
-        }
-		previous_player_position.x = current_player_position.x;
-		previous_player_position.y = current_player_position.y;
-		current_player_position = player_position;
+				'p' | 'P' => close_program(),
+				_ => println!("{}", character),
+			}
+		}
+
+		previous_player_position.x = player.position.x;
+		previous_player_position.y = player.position.y;
+
+		p = player.texture;
 
 		thread::sleep(time::Duration::from_millis(FPS));
 	}
@@ -95,36 +99,9 @@ fn close_program() {
 }
 
 
-fn move_object(mut current_pos: Position, direction: char) -> Position {
-	match direction { // I use a function to add animations in future
-		'w' | 'W' => current_pos.y -= 1,
-		's' | 'S' => current_pos.y += 1,
-		'd' | 'D' => current_pos.x += 1,
-		'a' | 'A' => current_pos.x -= 1,
-		_ => return current_pos,
-	};
-	return current_pos;
-}
 
 
-fn check_for_obstacles(x: usize, y: usize, obstacle_texture: char, map: Vec<Vec<char>>) -> bool {
-	return if map[y][x] == obstacle_texture { false } else { true }
-}
 
 
-fn get_position(map: Vec<Vec<char>>, object: char) -> Position {
-	let mut position = Position {
-		x: 0,
-		y: 0,
-	};
 
-	for layer in 0..map.len() {
-		for item in 0..map[layer].len() {
-			if map[layer][item] == object {
-				position.x = item;
-				position.y = layer;
-			}
-		}
-	}
-	return position;
-}
+
