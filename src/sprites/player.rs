@@ -5,6 +5,7 @@ pub struct Player {
 	pub texture: char,
 	pub position: Position,
 	pub direction: char,
+	pub coin_count: u32,
 }
 
 impl Player {
