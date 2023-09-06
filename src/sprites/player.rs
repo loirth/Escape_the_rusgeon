@@ -1,4 +1,4 @@
-use crate::structs::Position;
+use crate::level::structs::Position;
 
 pub struct Player {
 	pub anim_frames: [char; 4], // 0 - w(up), 1 - a(left), 2 - s(down), 3 - d(right)
