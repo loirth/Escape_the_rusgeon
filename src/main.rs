@@ -5,20 +5,19 @@ use console::Term;
 #[allow(unused_imports)]
 use core::mem::drop;
 
-mod sprites;
-pub use crate::sprites::player::Player;
+mod characters;
+pub use crate::characters::sprite::Player;
 
 mod level;
 pub use crate::level::structs::*;
 pub use crate::level::map::*;
 
 fn main() {
+	// main loop
 	loop {
-		let mut is_win_the_game = false;
-		let coins_needed_for_win = 50;
 		let player_anim_frames = ['▲', '<', '▼', '>'];
 
-		let mut t: LevelTextures = LevelTextures{
+		let t: LevelTextures = LevelTextures{
 			w: '■',
 			a: ' ',
 			c: '○', // can also be - ◌●○◙
@@ -40,29 +39,29 @@ fn main() {
 		];
 
 		let mut player = Player{
-			anim_frames: player_anim_frames,
-			texture: t.p,
 			position: get_position(t.p, &mut map),
-			direction: 'w',
+			direction: 'r',
+			rotation_frames: player_anim_frames,
+			texture: t.p,
+			collision_mask: vec!(['w', t.w], ['c', t.c], ['b', t.b]),
 			coin_count: 0,
+			coins_needed_for_win: 50,
+			is_win_the_game: false,
 		};
-		let mut previous_player_position = Position {x: player.position.x, y: player.position.y};
-		generate_coins(3, &t, &mut map);
+
+		generate_coins(3, t.c, t.a, &mut map);
 		
 		let stdout = Term::buffered_stdout();
 
 		const FPS: u64 = 1000 / 60;
-
+		// game loop
 		loop {
 			clear_screen();
 			move_cursor_up(1000);
 
-			// MAP changing
-			map[player.position.y][player.position.x] = t.p;
-
 			// UI
 			println!("WASD - movement\np - exit\n");
-			if is_win_the_game {println!("YOU WIN THE GAME!\nPress r to restart.\n")}
+			if player.is_win_the_game {println!("YOU WIN THE GAME!\nPress r to restart.\n")}
 			println!("Coins: {}", player.coin_count);
 			print_map(&map);
 
@@ -70,41 +69,18 @@ fn main() {
 				match character {
 					'w' | 'a' | 's' | 'd' | 'W' | 'A' | 'S' | 'D' => {
 						player.direction = character;
-						player.walk();
-
-						match check_for_obstacles(player.position.x, player.position.y, &t, &mut map) {
-							'w' => { 
-								player.position.x = previous_player_position.x;
-								player.position.y = previous_player_position.y;
-							},
-							'c' => {
-								player.coin_count += 1;
-								if player.coin_count >= coins_needed_for_win {is_win_the_game = true;}
-								generate_coins(1, &t, &mut map);
-							},
-							_ => {},
-						}
-						map[previous_player_position.y][previous_player_position.x] = t.a; //fill this tile with air, needed to avoid ïf statement
+						player.walk(t.a, &mut map);
 					},
-					'r' | 'R' => if is_win_the_game {break;},
+					'r' | 'R' => if player.is_win_the_game {break;},
 					'p' | 'P' => close_program(),
 					_ => println!("{}", character),
 				}
 			}
 
-			previous_player_position.x = player.position.x;
-			previous_player_position.y = player.position.y;
-
-			t.p = player.texture;
-
 			thread::sleep(time::Duration::from_millis(FPS));
 		}
 	}
 }
-
-/*fn generate_exits(MAP: Vec<Vec<char>>) {
-
-}*/
 
 fn clear_screen() {
 	print!("\x1b[2J");

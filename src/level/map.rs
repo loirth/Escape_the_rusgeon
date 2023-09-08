@@ -26,16 +26,12 @@ pub fn get_position(object: char, map: &mut Vec<Vec<char>>) -> Position {
 }
 
 pub fn check_for_obstacles(x: usize, y: usize, textures: &LevelTextures, map: &mut Vec<Vec<char>>) -> char {
-	// if map[y][x] == textures.w {return 'w';}
-	// 	textures.coin => return 'c',
-	// 	_ => {},
-	// }
 	return if map[y][x] == textures.w { 'w' } else if map[y][x] == textures.c { 'c' } else {' '};
 }
 
 // Generators
 
-pub  fn generate_coins(mut amount: u8, textures: &LevelTextures, map: &mut Vec<Vec<char>>) {
+pub  fn generate_coins(mut amount: u8, coin_texture: char, air_texture: char, map: &mut Vec<Vec<char>>) {
 	let mut rng = thread_rng();
 	let mut coin_positions = Vec::new();
 	while amount > 0 {
@@ -46,13 +42,10 @@ pub  fn generate_coins(mut amount: u8, textures: &LevelTextures, map: &mut Vec<V
 	}
 
 	for mut position in coin_positions.into_iter() {
-		/*if rng.gen_range(0..5) == 3 {  bombs implementation, but I will do it tomorrow
-			todo!();
-		}*/
-		while map[position.y][position.x] != textures.a {  // coins can spawn only on empty tile
+		while map[position.y][position.x] != air_texture {  // coins can spawn only on empty tile
 			position.y = rng.gen_range(1..map.len() - 1);
 			position.x = rng.gen_range(1..map.len() - 1);
 		}
-		map[position.y][position.x] = textures.c;
+		map[position.y][position.x] = coin_texture;
 	}
 }
