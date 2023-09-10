@@ -1,4 +1,5 @@
-use crate::level::{map::generate_coins, structs::Position};
+use crate::level::{structs::Position};
+use crate::generate_coins;
 
 pub struct Player {
 	pub position: Position,
@@ -39,28 +40,38 @@ impl Player {
 			_ => {},
 		}
 
-		if !self.is_collide(map[position_y][position_x], self.collision_mask.clone(), map) {
-			// Changing map
+		if !self.is_collide(map[position_y][position_x], self.collision_mask.clone()) {
 			map[self.position.y][self.position.x] = air_texture;
+
+			if self.is_collide_with_coin(map[position_y][position_x]) {
+				self.coin_count += 1;
+				if self.coin_count >= self.coins_needed_for_win {self.is_win_the_game = true;};
+				generate_coins(1, map[position_y][position_x], ' ', map);
+			}
+
 			self.position.x = position_x;
 			self.position.y = position_y;
 		}
 		map[self.position.y][self.position.x] = self.texture;
 	}
+
+	fn is_collide_with_coin(&self, tile: char) -> bool {
+		for collider in self.collision_mask.iter() {
+			if tile == collider[1] {
+				if collider[0] == 'c' { return true; }
+			}
+		}
+		return false;
+	}
 }
 
 
 impl Sprite for Player {
-	fn is_collide(&mut self, tile: char, _collision_mask: Vec<[char; 2]>, map: &mut Vec<Vec<char>>) -> bool {
+	fn is_collide(&mut self, tile: char, _collision_mask: Vec<[char; 2]>) -> bool {
 		for collider in self.collision_mask.iter() {
 			if tile == collider[1] {
 				match collider[0] {
 					'w' => return true,
-					'c' => {
-						self.coin_count += 1;
-						if self.coin_count >= self.coins_needed_for_win {self.is_win_the_game = true;};
-						generate_coins(1, collider[1], ' ', map);
-					},
 					_ => {},
 				}
 			}
@@ -71,7 +82,7 @@ impl Sprite for Player {
 
 
 trait Sprite {
-	fn is_collide(&mut self, tile: char, collision_mask: Vec<[char; 2]>, _map: &mut Vec<Vec<char>>) -> bool {
+	fn is_collide(&mut self, tile: char, collision_mask: Vec<[char; 2]>) -> bool {
 		for collider in collision_mask.iter() {
 			if tile == collider[1] {
 				match collider[0] {
